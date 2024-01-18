@@ -4,28 +4,26 @@ var AppointmentFactory = require("../factories/AppointmentFactory");
 
 const Appo = mongoose.model("Appointment", appointment);
 
+class AppointmentService {
 
-class AppointmentService{
-
-    async Create(name,email, description, cpf, date, time, finished){
-        var newAppo =  new Appo({
-            name,
-            email,
-            description,
-            cpf,
-            date,
-            time,
-            finished
+    async Create(name, email, description, cpf, date, time){
+        var newAppo = new Appo({
+                name,
+                email,
+                description,
+                cpf,
+                date,
+                time,
+                finished: false,
+                notified: false
         });
-
-        try {
+        try{
             await newAppo.save();
             return true;
-        } catch (err) {
+        }catch(err){
             console.log(err);
             return false;
         }
-       
     }
 
     async GetAll(showFinished){
@@ -36,16 +34,61 @@ class AppointmentService{
             var appointments = [];
 
             appos.forEach(appointment => {
-
-                if(appointment != undefined){
-                    appointments.push(AppointmentFactory.Build(appointment) )
-                }
+                if(appointment.date != undefined){
+                    appointments.push( AppointmentFactory.Build(appointment) )
+                }                
             });
 
-            return appointment;
+            return appointments;
         }
     }
 
+    async GetById(id){
+        try {
+            var event = await Appo.findOne({'_id': id});
+            return event;
+        } catch (err) {
+            console.log(err);
+        }
+        
+    }
+
+    async Finish(id){
+        try {
+            await Appo.findByIdAndUpdate(id,{finished: true});
+            return true;
+        } catch (err) {
+            console.log(err);
+            return false;
+        }
+        
+    }
+    async Search(query){
+        try {
+            var appos = await Appo.find().or([{emaail: query},{cpf: query}]);
+            return appos;
+        } catch (err) {
+            console.log(err);
+            return [];
+        }
+        
+    };
+
+    async SendNotification(){
+        var appos = await this.GetAll(false);
+        appos.forEach(app =>{
+
+            var date = app.start.getTime();
+            var hour = 1000 * 60 * 60;
+            var gap = date-Date.now();
+
+            if(gap <= hour){
+                console.log(app.title);
+                console.log("Mande a not");
+            }
+
+        })
+    }
 }
 
 module.exports = new AppointmentService();
